@@ -1,7 +1,5 @@
-version: 2026.232.0520
 tailscale:
     candy:
-        version: 2026.144.1443
         description: |
             Tailscale mesh VPN daemon baked in as an enabled systemd service.
             Installs the tailscale package (the `tailscale` CLI plus the
