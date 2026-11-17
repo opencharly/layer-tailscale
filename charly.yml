@@ -92,6 +92,17 @@ tailscale-skill:
 
 tailscale-suite-test:
     candy:
+        description: |
+            Ubuntu 26.04 image composing this candy, so the suite it writes can be asserted on the
+            release the org now defaults to. Its plan asserts the apt repo the candy declares;
+            `check-tailscale-suite-pod` drives it as a disposable target. Together they are the
+            build-scope gate this repo did not have before opencharly/layer-tailscale#6.
+        plan:
+            - check: the tailscale apt repo file names the suite this release actually uses
+              # Kept in the BOX as well as in the bed so `charly box build` alone reports it: a
+              # box whose plan is empty ships an untested image, which is the ADE gap this closes.
+              file:
+                file: /etc/apt/sources.list.d/tailscale.list
         base: ubuntu:26.04
         build:
             - deb
