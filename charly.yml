@@ -98,11 +98,12 @@ tailscale-suite-test:
             `check-tailscale-suite-pod` drives it as a disposable target. Together they are the
             build-scope gate this repo did not have before opencharly/layer-tailscale#6.
         plan:
-            - check: the tailscale apt repo file names the suite this release actually uses
+            - check: the tailscale apt repo names the resolute suite, not a stale one
               # Kept in the BOX as well as in the bed so `charly box build` alone reports it: a
               # box whose plan is empty ships an untested image, which is the ADE gap this closes.
-              file:
-                file: /etc/apt/sources.list.d/tailscale.list
+              # A `file:` probe would only prove the file EXISTS - the assertion is about its
+              # CONTENT, so it must be a command, not a presence check.
+              command: grep -q 'pkgs[.]tailscale[.]com/stable/ubuntu resolute' /etc/apt/sources.list.d/tailscale.list
         base: ubuntu:26.04
         build:
             - deb
