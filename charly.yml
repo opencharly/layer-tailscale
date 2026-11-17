@@ -97,9 +97,11 @@ tailscale-suite-test:
             release the org now defaults to. Its plan asserts the apt repo the candy declares;
             `check-tailscale-suite-pod` drives it as a disposable target. Together they are the
             build-scope gate this repo did not have before opencharly/layer-tailscale#6.
-        # No plan of its own: the CANDY's plan carries the suite assertion, and a candy plan is
-        # composed into the image's plan, so `charly box build` still reports it. A copy here
-        # would be the same predicate spelled twice (R2).
+        # ADE wants a box to have a plan; R2 forbids spelling the assertion twice. `include:`
+        # satisfies both: the box COMPOSES the candy's plan instead of copying its command, so
+        # there is one predicate and the box still reports it when built on its own.
+        plan:
+            - include: candy:tailscale
         base: ubuntu:26.04
         build:
             - deb
