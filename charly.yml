@@ -30,10 +30,27 @@ tailscale:
                       key: "https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg"
                       suite: noble
                       components: main
+            ubuntu-26.04:
+                # 26.04 is the org default; it needs the resolute suite, and it does NOT
+                # match the ubuntu-24.04 section above.
+                repo:
+                    - name: tailscale
+                      url: "https://pkgs.tailscale.com/stable/ubuntu"
+                      key: "https://pkgs.tailscale.com/stable/ubuntu/resolute.noarmor.gpg"
+                      suite: resolute
+                      components: main
         plan:
             - run: command=systemctl enable tailscaled.service 2>/dev/null || true
               run_as: root
               command: systemctl enable tailscaled.service 2>/dev/null || true
+            - check: the 26.04 guest's tailscale repo names the resolute suite, not a stale one
+              # The assertion that FAILS without the ubuntu-26.04 section: an ubuntu:26.04 image
+              # matches no other versioned distro section, so without it the repo file either does
+              # not exist or still names `noble`. Variable-free on purpose - a check step resolves
+              # only the runner's auto-exported names, so `$VERSION_CODENAME` is a DEAD assertion.
+              command: grep -q 'pkgs[.]tailscale[.]com/stable/ubuntu resolute' /etc/apt/sources.list.d/tailscale.list
+              run_as: root
+              exclude_distro: [ubuntu:24.04, ubuntu-24.04, debian, debian-13, fedora, arch]
             - check: the tailscale CLI is installed and executable at /usr/bin/tailscale
               file:
                 file: /usr/bin/tailscale
@@ -45,9 +62,14 @@ tailscale:
               file:
                 file: /usr/sbin/tailscaled
                 exists: true
-            - check: the tailscaled systemd unit is enabled so the node joins its tailnet at boot
-              exit_status: 0
-              command: systemctl is-enabled tailscaled.service
+            - check: the tailscaled unit file is installed, so a systemd target can enable it
+              # BUILD-SCOPE HONESTY: a build stage has no running init, so `systemctl is-enabled`
+              # exits 127 here and made check box permanently red for this candy (opencharly/
+              # layer-tailscale#5). The candy's own run: step already tolerates that with `|| true`.
+              # "enabled" is a DEPLOY-time fact and belongs to a deploy-scope check; what the build
+              # can prove is that the unit the enable step acts on actually exists.
+              file:
+                file: /lib/systemd/system/tailscaled.service
             - check: command=test -x /usr/bin/tailscale && test -x /usr/sbin/tailscaled
               id: tailscale-binary
               exit_status: 0
@@ -67,3 +89,39 @@ tailscale-skill:
             Tailscale mesh VPN (tailscaled service).
             Installs the tailscale package from upstream, enables tailscaled.service via systemd.
             Use when adding Tailscale as a standalone systemd service to a box — distinct from the deploy-time Tailscale tunnel/sidecar model.
+
+tailscale-suite-test:
+    candy:
+        description: |
+            Ubuntu 26.04 image composing this candy, so the suite it writes can be asserted on the
+            release the org now defaults to. Its plan asserts the apt repo the candy declares;
+            `check-tailscale-suite-pod` drives it as a disposable target. Together they are the
+            build-scope gate this repo did not have before opencharly/layer-tailscale#6.
+        # ADE wants a box to have a plan; R2 forbids spelling the assertion twice. `include:`
+        # satisfies both: the box COMPOSES the candy's plan instead of copying its command, so
+        # there is one predicate and the box still reports it when built on its own.
+        plan:
+            - include: candy:tailscale
+        base: ubuntu:26.04
+        build:
+            - deb
+        distro:
+            - ubuntu:26.04
+            - ubuntu
+        candy:
+            - tailscale
+
+check-tailscale-suite-pod:
+    pod:
+        image: tailscale-suite-test
+        disposable: true
+        lifecycle: dev
+        description: |
+            The disposable target this candy was missing: a pod built from the tailscale image on
+            Ubuntu 26.04, asserting that the apt repository the candy writes names the RESOLUTE
+            suite. Reverting the ubuntu-26.04 section to no-section-or-noble makes this FAIL, which
+            is the whole point - the candy previously had no gate that could fail on the suite at
+            all. opencharly/layer-tailscale#4.
+        # No plan of its own for the same reason as the box: `check run` drives the image's plan,
+        # which already carries the candy's suite assertion. What this bed ADDS is the disposable
+        # target and the full build/deploy/rebuild/cleanup sequence around it.
