@@ -43,6 +43,14 @@ tailscale:
             - run: command=systemctl enable tailscaled.service 2>/dev/null || true
               run_as: root
               command: systemctl enable tailscaled.service 2>/dev/null || true
+            - check: the 26.04 guest's tailscale repo names the resolute suite, not a stale one
+              # The assertion that FAILS without the ubuntu-26.04 section: an ubuntu:26.04 image
+              # matches no other versioned distro section, so without it the repo file either does
+              # not exist or still names `noble`. Variable-free on purpose - a check step resolves
+              # only the runner's auto-exported names, so `$VERSION_CODENAME` is a DEAD assertion.
+              command: grep -q 'pkgs[.]tailscale[.]com/stable/ubuntu resolute' /etc/apt/sources.list.d/tailscale.list
+              run_as: root
+              exclude_distro: [ubuntu:24.04, ubuntu-24.04, debian, debian-13, fedora, arch]
             - check: the tailscale CLI is installed and executable at /usr/bin/tailscale
               file:
                 file: /usr/bin/tailscale
