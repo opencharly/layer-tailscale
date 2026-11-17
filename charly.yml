@@ -30,6 +30,15 @@ tailscale:
                       key: "https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg"
                       suite: noble
                       components: main
+            ubuntu-26.04:
+                # 26.04 is the org default; it needs the resolute suite, and it does NOT
+                # match the ubuntu-24.04 section above.
+                repo:
+                    - name: tailscale
+                      url: "https://pkgs.tailscale.com/stable/ubuntu"
+                      key: "https://pkgs.tailscale.com/stable/ubuntu/resolute.noarmor.gpg"
+                      suite: resolute
+                      components: main
         plan:
             - run: command=systemctl enable tailscaled.service 2>/dev/null || true
               run_as: root
