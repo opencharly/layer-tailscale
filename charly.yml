@@ -97,13 +97,9 @@ tailscale-suite-test:
             release the org now defaults to. Its plan asserts the apt repo the candy declares;
             `check-tailscale-suite-pod` drives it as a disposable target. Together they are the
             build-scope gate this repo did not have before opencharly/layer-tailscale#6.
-        plan:
-            - check: the tailscale apt repo names the resolute suite, not a stale one
-              # Kept in the BOX as well as in the bed so `charly box build` alone reports it: a
-              # box whose plan is empty ships an untested image, which is the ADE gap this closes.
-              # A `file:` probe would only prove the file EXISTS - the assertion is about its
-              # CONTENT, so it must be a command, not a presence check.
-              command: grep -q 'pkgs[.]tailscale[.]com/stable/ubuntu resolute' /etc/apt/sources.list.d/tailscale.list
+        # No plan of its own: the CANDY's plan carries the suite assertion, and a candy plan is
+        # composed into the image's plan, so `charly box build` still reports it. A copy here
+        # would be the same predicate spelled twice (R2).
         base: ubuntu:26.04
         build:
             - deb
@@ -124,6 +120,6 @@ check-tailscale-suite-pod:
             suite. Reverting the ubuntu-26.04 section to no-section-or-noble makes this FAIL, which
             is the whole point - the candy previously had no gate that could fail on the suite at
             all. opencharly/layer-tailscale#4.
-        plan:
-            - check: the guest's tailscale repo names the resolute suite, not a stale one
-              command: grep -q 'pkgs[.]tailscale[.]com/stable/ubuntu resolute' /etc/apt/sources.list.d/tailscale.list
+        # No plan of its own for the same reason as the box: `check run` drives the image's plan,
+        # which already carries the candy's suite assertion. What this bed ADDS is the disposable
+        # target and the full build/deploy/rebuild/cleanup sequence around it.
